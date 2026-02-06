@@ -5,13 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KET 單字特訓營 (AI 版)</title>
     
-    <!-- 1. 載入 Tailwind CSS (樣式) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. 載入 React 和 Babel (讓瀏覽器看懂程式碼) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- 3. 設定 Import Map (讓瀏覽器可以下載 React 套件) -->
     <script type="importmap">
     {
       "imports": {
@@ -23,7 +19,6 @@
     </script>
 
     <style>
-        /* 自定義動畫 */
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-5px) rotate(-5deg); }
@@ -40,7 +35,6 @@
 <body class="bg-yellow-50">
     <div id="root"></div>
 
-    <!-- 4. 這裡開始是我們的主程式 -->
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect } from 'react';
         import { createRoot } from 'react-dom/client';
@@ -52,12 +46,8 @@
         const apiKey = "AIzaSyDwXTGxjNe5exKco08-jxdX-PP4RuJqt5Y"; 
         // ==========================================
 
-        // --- API 呼叫函式 ---
         const callGemini = async (prompt) => {
-          if (!apiKey) {
-              alert("請先在程式碼中設定 API Key 喔！");
-              return null;
-          }
+          if (!apiKey) return null;
           try {
             const response = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
@@ -76,7 +66,6 @@
           }
         };
 
-        // --- KET 核心單字庫 ---
         const KET_DB = [
             { word: 'adventure', meaning: '冒險', type: 'n.', sentence: 'Going to the jungle was a big _____.' , definition: 'An exciting and sometimes dangerous experience.'},
             { word: 'believe', meaning: '相信', type: 'v.', sentence: 'I _____ that you can do it!', definition: 'To think that something is true.' },
@@ -88,54 +77,14 @@
             { word: 'cheap', meaning: '便宜的', type: 'adj.', sentence: 'This t-shirt is very _____, only $5.', definition: 'Costing little money; not expensive.' },
             { word: 'collect', meaning: '收集', type: 'v.', sentence: 'I like to _____ stamps from different countries.', definition: 'To get and keep things of the same type.' },
             { word: 'competition', meaning: '比賽', type: 'n.', sentence: 'He won the first prize in the swimming _____.', definition: 'An event where people try to be the best.' },
-            { word: 'dangerous', meaning: '危險的', type: 'adj.', sentence: 'It is _____ to play with fire.', definition: 'Likely to hurt or harm you; not safe.' },
-            { word: 'decide', meaning: '決定', type: 'v.', sentence: 'I cannot _____ which ice cream to buy.', definition: 'To choose something after thinking about it.' },
-            { word: 'delicious', meaning: '美味的', type: 'adj.', sentence: 'This cake is really _____.', definition: 'Having a very good taste.' },
-            { word: 'dentist', meaning: '牙醫', type: 'n.', sentence: 'You should see a _____ if your tooth hurts.', definition: 'A doctor who takes care of people\'s teeth.' },
-            { word: 'describe', meaning: '描述', type: 'v.', sentence: 'Can you _____ what the thief looked like?', definition: 'To say what someone or something is like.' },
-            { word: 'diary', meaning: '日記', type: 'n.', sentence: 'She writes in her _____ every night.', definition: 'A book where you write about what happened to you each day.' },
-            { word: 'dictionary', meaning: '字典', type: 'n.', sentence: 'I look up new words in the _____.', definition: 'A book that lists words and their meanings.' },
-            { word: 'different', meaning: '不同的', type: 'adj.', sentence: 'My brother and I have _____ hobbies.', definition: 'Not the same.' },
-            { word: 'dinosaur', meaning: '恐龍', type: 'n.', sentence: 'The T-Rex is a famous _____.', definition: 'A large reptile that lived millions of years ago.' },
-            { word: 'dolphin', meaning: '海豚', type: 'n.', sentence: 'The _____ jumped out of the water.', definition: 'A clever sea animal that looks like a large fish.' },
-            { word: 'during', meaning: '在...期間', type: 'prep.', sentence: 'Please be quiet _____ the exam.', definition: 'From the beginning to the end of a period of time.' },
-            { word: 'earn', meaning: '賺錢', type: 'v.', sentence: 'He works hard to _____ money.', definition: 'To get money for doing work.' },
-            { word: 'engineer', meaning: '工程師', type: 'n.', sentence: 'An _____ builds bridges and roads.', definition: 'Someone whose job is to design or build machines, engines, or electrical equipment.' },
-            { word: 'excited', meaning: '興奮的', type: 'adj.', sentence: 'The children are _____ about the party.', definition: 'Feeling very happy and enthusiastic.' },
-            { word: 'expensive', meaning: '昂貴的', type: 'adj.', sentence: 'That car is too _____ for me to buy.', definition: 'Costing a lot of money.' },
-            { word: 'famous', meaning: '著名的', type: 'adj.', sentence: 'Leonardo da Vinci is a _____ artist.', definition: 'Known by many people.' },
-            { word: 'favorite', meaning: '最喜愛的', type: 'adj.', sentence: 'Red is my _____ color.', definition: 'The one you like the most.' },
-            { word: 'festival', meaning: '節慶', type: 'n.', sentence: 'The Lantern _____ is beautiful.', definition: 'A special day or period with a lot of social activities.' },
-            { word: 'foggy', meaning: '有霧的', type: 'adj.', sentence: 'It was so _____ that we couldn\'t see the road.', definition: 'Full of thick cloud close to the ground.' },
-            { word: 'friendly', meaning: '友善的', type: 'adj.', sentence: 'Our new neighbors are very _____.', definition: 'Behaving in a pleasant, kind way towards someone.' },
-            { word: 'future', meaning: '未來', type: 'n.', sentence: 'What do you want to be in the _____?', definition: 'The time that will come after the present.' },
-            { word: 'geography', meaning: '地理', type: 'n.', sentence: 'We learned about rivers in _____ class.', definition: 'The study of the systems and processes involved in the world\'s weather, mountains, seas, lakes, etc.' },
-            { word: 'happen', meaning: '發生', type: 'v.', sentence: 'What will _____ if I press this button?', definition: 'To take place; to occur.' },
-            { word: 'heavy', meaning: '重的', type: 'adj.', sentence: 'This box is too _____ to lift.', definition: 'Weighing a lot.' },
-            { word: 'history', meaning: '歷史', type: 'n.', sentence: 'We are studying American _____.', definition: 'The study of past events.' },
-            { word: 'hobby', meaning: '嗜好', type: 'n.', sentence: 'My favorite _____ is reading.', definition: 'An activity you do for pleasure when you are not working.' },
-            { word: 'horrible', meaning: '可怕的;糟糕的', type: 'adj.', sentence: 'The weather was _____ yesterday.', definition: 'Very unpleasant or bad.' },
-            { word: 'hotel', meaning: '旅館', type: 'n.', sentence: 'We stayed in a nice _____ by the sea.', definition: 'A place where you pay to stay the night.' },
-            { word: 'husband', meaning: '丈夫', type: 'n.', sentence: 'Mr. Smith is Mrs. Smith\'s _____.', definition: 'The man that a woman is married to.' },
-            { word: 'improve', meaning: '改善', type: 'v.', sentence: 'I want to _____ my English skills.', definition: 'To make something better.' },
-            { word: 'information', meaning: '資訊', type: 'n.', sentence: 'Can you give me some _____ about the tour?', definition: 'Facts about a situation, person, event, etc.' },
-            { word: 'insect', meaning: '昆蟲', type: 'n.', sentence: 'An ant is a small _____.', definition: 'A small creature with six legs.' },
-            { word: 'instrument', meaning: '樂器', type: 'n.', sentence: 'Which _____ do you play? Piano or guitar?', definition: 'An object used for producing music.' },
-            { word: 'invite', meaning: '邀請', type: 'v.', sentence: 'Let\'s _____ Tom to our party.', definition: 'To ask someone to come to a social event.' },
-            { word: 'island', meaning: '島嶼', type: 'n.', sentence: 'Taiwan is a beautiful _____.', definition: 'A piece of land completely surrounded by water.' },
-            { word: 'journey', meaning: '旅程', type: 'n.', sentence: 'Have a safe _____ home!', definition: 'The act of traveling from one place to another.' },
-            { word: 'kitchen', meaning: '廚房', type: 'n.', sentence: 'Mom is cooking dinner in the _____.', definition: 'A room where food is prepared and cooked.' },
-            { word: 'language', meaning: '語言', type: 'n.', sentence: 'How many _____ do you speak?', definition: 'A system of communication used by a particular country or community.' },
-            { word: 'medicine', meaning: '藥', type: 'n.', sentence: 'Take this _____ three times a day.', definition: 'Something you take to treat an illness.' },
-            { word: 'museum', meaning: '博物館', type: 'n.', sentence: 'We saw old bones at the _____.', definition: 'A building where objects of historical, scientific, or artistic interest are kept.' }
         ];
 
-        // --- 角色圖片庫 ---
+        // --- 使用 lh3.googleusercontent.com 格式，這通常比較穩定 ---
         const CHARACTER_IMAGES = [
-            "https://drive.google.com/thumbnail?id=14SfoP3jwHyiDwkt57f5lJYRvomV71XIR&sz=w1000",
-            "https://drive.google.com/thumbnail?id=1vFOu13zScXCjDLKRzeB693tN7bNdur7d&sz=w1000",
-            "https://drive.google.com/thumbnail?id=1lhgfcEga_A4IVLByXLonwfrLA0XiTMa4&sz=w1000",
-            "https://drive.google.com/thumbnail?id=1hUr1F0GyNDf7IiHswqLOFp9Q9RYubbNh&sz=w1000"
+            "https://lh3.googleusercontent.com/d/14SfoP3jwHyiDwkt57f5lJYRvomV71XIR",
+            "https://lh3.googleusercontent.com/d/1vFOu13zScXCjDLKRzeB693tN7bNdur7d",
+            "https://lh3.googleusercontent.com/d/1lhgfcEga_A4IVLByXLonwfrLA0XiTMa4",
+            "https://lh3.googleusercontent.com/d/1hUr1F0GyNDf7IiHswqLOFp9Q9RYubbNh"
         ];
 
         const GameCharacter = ({ index, emotion, className = "" }) => {
@@ -163,7 +112,8 @@
                         referrerPolicy="no-referrer"
                         onError={(e) => { 
                             e.target.style.display='none'; 
-                            e.target.parentElement.innerHTML = '<div class="text-xs text-gray-400 text-center flex flex-col items-center justify-center h-full"><div>⚠️</div><div>圖片無法讀取</div></div>';
+                            // 移除倉鼠 Emoji，改用文字提示，或是什麼都不顯示保持乾淨
+                            e.target.parentElement.innerHTML = '<span class="text-xs text-red-300">圖檔載入失敗</span>';
                         }}
                     />
                 </div>
@@ -188,7 +138,7 @@
             const [charIndex, setCharIndex] = useState(0); 
 
             useEffect(() => {
-                setVocabList(KET_DB.slice(0, 10));
+                setVocabList(KET_DB);
                 setCharIndex(Math.floor(Math.random() * CHARACTER_IMAGES.length));
             }, []);
 
@@ -201,30 +151,38 @@
                 }
                 
                 const quizData = selectedList.map(item => {
-                const typeRoll = Math.random();
-                let qType = 'wordToMeaning'; 
-                if (typeRoll > 0.66) qType = 'sentenceCloze'; 
-                else if (typeRoll > 0.33) qType = 'meaningToWord'; 
+                    const typeRoll = Math.random();
+                    let qType = 'wordToMeaning'; 
+                    // 如果沒有 sentence 或是 definition (手動輸入且沒 API 的情況)，只能出「單字選中文」或「中文選單字」
+                    const hasDetails = item.sentence && item.definition;
+                    
+                    if (hasDetails) {
+                        if (typeRoll > 0.66) qType = 'sentenceCloze'; 
+                        else if (typeRoll > 0.33) qType = 'meaningToWord'; 
+                    } else {
+                        // 降級模式：只有互選
+                        qType = typeRoll > 0.5 ? 'wordToMeaning' : 'meaningToWord';
+                    }
 
-                let distractors = [];
-                const source = sourceList.length > 10 ? sourceList : KET_DB;
+                    let distractors = [];
+                    const source = sourceList.length > 5 ? sourceList : KET_DB;
 
-                if (qType === 'wordToMeaning') {
-                    distractors = source.filter(v => v.word !== item.word)
-                        .sort(() => 0.5 - Math.random()).slice(0, 3).map(v => v.meaning);
-                } else {
-                    distractors = source.filter(v => v.word !== item.word)
-                        .sort(() => 0.5 - Math.random()).slice(0, 3).map(v => v.word);
-                }
-                
-                const correctOpt = qType === 'wordToMeaning' ? item.meaning : item.word;
-                const options = [...distractors, correctOpt].sort(() => 0.5 - Math.random());
-                
-                return {
-                    ...item,
-                    options,
-                    questionType: qType
-                };
+                    if (qType === 'wordToMeaning') {
+                        distractors = source.filter(v => v.word !== item.word)
+                            .sort(() => 0.5 - Math.random()).slice(0, 3).map(v => v.meaning);
+                    } else {
+                        distractors = source.filter(v => v.word !== item.word)
+                            .sort(() => 0.5 - Math.random()).slice(0, 3).map(v => v.word);
+                    }
+                    
+                    const correctOpt = qType === 'wordToMeaning' ? item.meaning : item.word;
+                    const options = [...distractors, correctOpt].sort(() => 0.5 - Math.random());
+                    
+                    return {
+                        ...item,
+                        options,
+                        questionType: qType
+                    };
                 });
 
                 setCurrentQuizList(quizData);
@@ -237,7 +195,8 @@
             };
 
             const generateChallengeQuiz = () => {
-                const availableWords = vocabList.filter(v => v.definition); 
+                // 挑戰題必須要有英文解釋 (definition)
+                const availableWords = vocabList.filter(v => v.definition && v.definition !== "No definition available."); 
                 const sourcePool = availableWords.length >= 5 ? availableWords : KET_DB;
                 const challengeList = sourcePool.sort(() => 0.5 - Math.random()).slice(0, 5);
                 
@@ -279,11 +238,11 @@
                 setCharIndex(prev => (prev + 1) % CHARACTER_IMAGES.length);
 
                 if (isAnsCorrect) {
-                setScore(s => s + (isChallengeMode ? 50 : 10)); 
+                    setScore(s => s + (isChallengeMode ? 50 : 10)); 
                 } else {
-                if (!isChallengeMode && !wrongQuestions.find(q => q.word === currentQ.word)) {
-                    setWrongQuestions(prev => [...prev, currentQ]);
-                }
+                    if (!isChallengeMode && !wrongQuestions.find(q => q.word === currentQ.word)) {
+                        setWrongQuestions(prev => [...prev, currentQ]);
+                    }
                 }
             };
 
@@ -293,48 +252,79 @@
                 setAiExplanation(null);
                 
                 if (currentIndex < currentQuizList.length - 1) {
-                setCurrentIndex(prev => prev + 1);
+                    setCurrentIndex(prev => prev + 1);
                 } else {
-                if (!isReviewMode && !isChallengeMode) {
-                    setScreen('challenge-prompt');
-                } else {
-                    setScreen('result');
-                }
+                    if (!isReviewMode && !isChallengeMode) {
+                        // 檢查是否有足夠的題目可以產生挑戰題 (至少要有 definition)
+                        const hasDefinitions = vocabList.some(v => v.definition);
+                        if(hasDefinitions) {
+                            setScreen('challenge-prompt');
+                        } else {
+                            setScreen('result');
+                        }
+                    } else {
+                        setScreen('result');
+                    }
                 }
             };
 
+            // --- 修正後的 Smart Import 邏輯 ---
             const handleSmartImport = async () => {
-                const rawWords = inputText
-                    .replace(/[.,:;]/g, ' ') 
-                    .split(/[\n\s]+/)
-                    .map(w => w.trim().toLowerCase())
-                    .filter(w => w.length > 0);
-                
-                const uniqueWords = [...new Set(rawWords)];
-
-                if (uniqueWords.length === 0) {
+                const rawText = inputText.trim();
+                if (!rawText) {
                     setVocabList(KET_DB);
-                    alert(`未檢測到輸入，已為您自動載入 ${KET_DB.length} 個 KET 精選單字！`);
+                    alert("未檢測到輸入，已載入預設 KET 題庫。");
                     setScreen('home');
                     return;
                 }
 
-                const matchedList = [];
-                const unknownWords = [];
+                // 1. 嘗試解析 "英文:中文" 格式
+                const lines = rawText.split(/\n+/);
+                const manualList = [];
+                const pureWords = [];
 
-                uniqueWords.forEach(w => {
-                    const found = KET_DB.find(dbItem => dbItem.word.toLowerCase() === w);
-                    if (found) {
-                        matchedList.push(found);
+                lines.forEach(line => {
+                    // 支援全形冒號和半形冒號
+                    if (line.includes(':') || line.includes('：')) {
+                        const parts = line.split(/[:：]/);
+                        if (parts.length >= 2) {
+                            const w = parts[0].trim();
+                            const m = parts[1].trim();
+                            if (w && m) {
+                                manualList.push({
+                                    word: w,
+                                    meaning: m,
+                                    type: '?',
+                                    sentence: '', // 手動輸入模式沒有例句
+                                    definition: '' // 手動輸入模式沒有英文解釋
+                                });
+                            }
+                        }
                     } else {
-                        unknownWords.push(w);
+                        // 純單字
+                        const w = line.trim().replace(/[.,;]/g, '');
+                        if (w) pureWords.push(w);
                     }
                 });
 
-                if (unknownWords.length > 0) {
+                // 如果使用者輸入了 "英文:中文"，優先使用這些，不呼叫 AI
+                if (manualList.length > 0) {
+                    setVocabList(manualList);
+                    alert(`已成功手動載入 ${manualList.length} 個單字！\n(提示：因為是手動輸入，將不會有例句填空題，只會有英漢互選題)`);
+                    setScreen('home');
+                    return;
+                }
+
+                // 2. 如果只有純英文單字，則嘗試呼叫 AI
+                if (pureWords.length > 0) {
+                    if (!apiKey) {
+                        alert("⚠️ 偵測到您只輸入了英文單字，但未設定 API Key。\n\n請改用「英文:中文」的格式輸入 (例如 apple:蘋果)，或是設定 API Key 讓 AI 幫您翻譯。");
+                        return; // 中斷，不讓它變成"待查詢"
+                    }
+
                     setIsAiLoading(true);
                     try {
-                        const wordsToFetch = unknownWords.slice(0, 15); 
+                        const wordsToFetch = pureWords.slice(0, 15);
                         const prompt = `
                         I have a list of English words: ${JSON.stringify(wordsToFetch)}.
                         Generate JSON array (fields: word, meaning(Traditional Chinese), type, sentence(with '_____'), definition(simple English)).
@@ -342,33 +332,24 @@
                         `;
                         
                         const resultText = await callGemini(prompt);
+                        
+                        if (!resultText) {
+                            throw new Error("API No Response");
+                        }
+
                         const cleanJson = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
                         const aiGeneratedWords = JSON.parse(cleanJson);
                         
-                        const finalNewList = [...matchedList, ...aiGeneratedWords];
-                        
-                        if (finalNewList.length < 4) {
-                            alert("單字總數太少，已自動補充一些 KET 基礎單字。");
-                            const supplementary = KET_DB.filter(k => !finalNewList.find(n => n.word === k.word)).slice(0, 10);
-                            setVocabList([...finalNewList, ...supplementary]);
-                        } else {
-                            setVocabList(finalNewList);
-                        }
-                        
-                        alert(`載入完成！包含 ${aiGeneratedWords.length} 個 AI 生成單字。`);
+                        setVocabList(aiGeneratedWords);
+                        alert(`AI 成功為您載入 ${aiGeneratedWords.length} 個單字！`);
+                        setScreen('home');
 
                     } catch (e) {
-                        console.error("AI Import Failed", e);
-                        alert("AI 連線失敗，僅載入本地已知單字。");
-                        setVocabList(matchedList.length > 0 ? matchedList : KET_DB);
+                        console.error("AI Error", e);
+                        alert("AI 連線失敗 (請檢查 API Key)。\n\n建議您改用「英文:中文」的手動格式輸入單字。");
                     } finally {
                         setIsAiLoading(false);
-                        setScreen('home');
                     }
-                } else {
-                    setVocabList(matchedList);
-                    alert(`成功載入 ${matchedList.length} 個單字！`);
-                    setScreen('home');
                 }
             };
 
@@ -383,15 +364,15 @@
 
                 try {
                     const text = await callGemini(prompt);
+                    if (!text) throw new Error("API returned null");
                     setAiExplanation(text);
                 } catch (e) {
-                    setAiExplanation("老師現在有點忙，請稍後再試試看！(網路錯誤)");
+                    setAiExplanation("老師現在有點忙，請稍後再試試看！(或是檢查 API Key)");
                 } finally {
                     setIsAiLoading(false);
                 }
             };
 
-            // 渲染畫面
             if (screen === 'home') {
                 return (
                     <div className="flex flex-col items-center justify-center min-h-screen bg-yellow-50 p-4 space-y-8 font-sans">
@@ -426,18 +407,19 @@
                         <div className="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6 border-b-8 border-blue-200 max-h-[90vh] overflow-y-auto">
                             <div className="mb-4">
                                 <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                                    <Sparkles className="mr-2 text-yellow-500" /> AI 智能單字匯入
+                                    <Sparkles className="mr-2 text-yellow-500" /> 單字匯入
                                 </h2>
                                 <div className="bg-blue-50 p-4 rounded-xl mb-4 text-sm text-blue-800">
-                                    貼上英文單字，AI 自動查詞義、造句！
+                                    <strong>方式 1 (有 API Key):</strong> 貼上純英文單字，AI 自動翻譯。<br/>
+                                    <strong>方式 2 (無 API Key):</strong> 請輸入「英文:中文」，例如 <code>apple:蘋果</code>。
                                 </div>
-                                <textarea className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:outline-none bg-gray-50 mb-4 text-lg font-mono" placeholder="請貼上英文單字 (如: apple, banana)..." value={inputText} onChange={(e) => setInputText(e.target.value)} disabled={isAiLoading} />
+                                <textarea className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:outline-none bg-gray-50 mb-4 text-lg font-mono" placeholder="apple:蘋果&#10;banana:香蕉&#10;..." value={inputText} onChange={(e) => setInputText(e.target.value)} disabled={isAiLoading} />
                             </div>
                             <div className="flex space-x-3">
                                 <button onClick={() => setScreen('home')} disabled={isAiLoading} className="flex-1 bg-gray-200 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-300">返回首頁</button>
                                 <button onClick={handleSmartImport} disabled={isAiLoading} className="flex-1 bg-blue-500 text-white font-bold py-3 rounded-xl border-b-4 border-blue-700 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center">
                                     {isAiLoading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" size={18} />}
-                                    {isAiLoading ? 'AI 載入單字' : '確認設定'}
+                                    {isAiLoading ? '確認匯入' : '確認匯入'}
                                 </button>
                             </div>
                         </div>
