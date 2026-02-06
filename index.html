@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KET 單字特訓營 (AI 版)</title>
+    
+    <!-- 1. 載入 Tailwind CSS (樣式) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. 載入 React 和 Babel (讓瀏覽器看懂程式碼) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 3. 設定 Import Map (讓瀏覽器可以下載 React 套件) -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.263.1"
+      }
+    }
+    </script>
+
+    <style>
+        /* 自定義動畫 */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px) rotate(-5deg); }
+            75% { transform: translateX(5px) rotate(5deg); }
+        }
+        .animate-shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-yellow-50">
+    <div id="root"></div>
+
+    <!-- 4. 這裡開始是我們的主程式 -->
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { Settings, Play, Check, RefreshCcw, BookOpen, Star, RotateCcw, Volume2, Trophy, Type, Languages, MessageSquare, Sparkles, Loader2, Sword, Flame, Image as ImageIcon } from 'lucide-react';
+
+        // ==========================================
+        // 請在這裡填入您的 Google Gemini API Key
+        // ==========================================
+        const apiKey = "AIzaSyBl5czX7HZqtZLHgKrN6eGeha7KcXXk0qI"; 
+        // ==========================================
+
+        // --- API 呼叫函式 ---
+        const callGemini = async (prompt) => {
+          if (!apiKey) {
+              alert("請先在程式碼中設定 API Key 喔！");
+              return null;
+          }
+          try {
+            const response = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+              }
+            );
+            if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+            const data = await response.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          } catch (error) {
+            console.error("Gemini API Error:", error);
+            return null;
+          }
+        };
+
+        // --- KET 核心單字庫 ---
+        const KET_DB = [
+            { word: 'adventure', meaning: '冒險', type: 'n.', sentence: 'Going to the jungle was a big _____.' , definition: 'An exciting and sometimes dangerous experience.'},
+            { word: 'believe', meaning: '相信', type: 'v.', sentence: 'I _____ that you can do it!', definition: 'To think that something is true.' },
+            { word: 'bicycle', meaning: '腳踏車', type: 'n.', sentence: 'He rides his _____ to school every day.', definition: 'A vehicle with two wheels that you ride.' },
+            { word: 'bored', meaning: '感到無聊的', type: 'adj.', sentence: 'She felt _____ during the long movie.', definition: 'Feeling tired and unhappy because something is not interesting.' },
+            { word: 'borrow', meaning: '借入', type: 'v.', sentence: 'Can I _____ your pencil, please?', definition: 'To take and use something that belongs to someone else.' },
+            { word: 'careful', meaning: '小心的', type: 'adj.', sentence: 'Be _____ when you cross the street.', definition: 'Giving a lot of attention to what you are doing so you don\'t make a mistake.' },
+            { word: 'century', meaning: '世紀', type: 'n.', sentence: 'We live in the 21st _____.', definition: 'A period of 100 years.' },
+            { word: 'cheap', meaning: '便宜的', type: 'adj.', sentence: 'This t-shirt is very _____, only $5.', definition: 'Costing little money; not expensive.' },
+            { word: 'collect', meaning: '收集', type: 'v.', sentence: 'I like to _____ stamps from different countries.', definition: 'To get and keep things of the same type.' },
+            { word: 'competition', meaning: '比賽', type: 'n.', sentence: 'He won the first prize in the swimming _____.', definition: 'An event where people try to be the best.' },
+            { word: 'dangerous', meaning: '危險的', type: 'adj.', sentence: 'It is _____ to play with fire.', definition: 'Likely to hurt or harm you; not safe.' },
+            { word: 'decide', meaning: '決定', type: 'v.', sentence: 'I cannot _____ which ice cream to buy.', definition: 'To choose something after thinking about it.' },
+            { word: 'delicious', meaning: '美味的', type: 'adj.', sentence: 'This cake is really _____.', definition: 'Having a very good taste.' },
+            { word: 'dentist', meaning: '牙醫', type: 'n.', sentence: 'You should see a _____ if your tooth hurts.', definition: 'A doctor who takes care of people\'s teeth.' },
+            { word: 'describe', meaning: '描述', type: 'v.', sentence: 'Can you _____ what the thief looked like?', definition: 'To say what someone or something is like.' },
+            { word: 'diary', meaning: '日記', type: 'n.', sentence: 'She writes in her _____ every night.', definition: 'A book where you write about what happened to you each day.' },
+            { word: 'dictionary', meaning: '字典', type: 'n.', sentence: 'I look up new words in the _____.', definition: 'A book that lists words and their meanings.' },
+            { word: 'different', meaning: '不同的', type: 'adj.', sentence: 'My brother and I have _____ hobbies.', definition: 'Not the same.' },
+            { word: 'dinosaur', meaning: '恐龍', type: 'n.', sentence: 'The T-Rex is a famous _____.', definition: 'A large reptile that lived millions of years ago.' },
+            { word: 'dolphin', meaning: '海豚', type: 'n.', sentence: 'The _____ jumped out of the water.', definition: 'A clever sea animal that looks like a large fish.' },
+            { word: 'during', meaning: '在...期間', type: 'prep.', sentence: 'Please be quiet _____ the exam.', definition: 'From the beginning to the end of a period of time.' },
+            { word: 'earn', meaning: '賺錢', type: 'v.', sentence: 'He works hard to _____ money.', definition: 'To get money for doing work.' },
+            { word: 'engineer', meaning: '工程師', type: 'n.', sentence: 'An _____ builds bridges and roads.', definition: 'Someone whose job is to design or build machines, engines, or electrical equipment.' },
+            { word: 'excited', meaning: '興奮的', type: 'adj.', sentence: 'The children are _____ about the party.', definition: 'Feeling very happy and enthusiastic.' },
+            { word: 'expensive', meaning: '昂貴的', type: 'adj.', sentence: 'That car is too _____ for me to buy.', definition: 'Costing a lot of money.' },
+            { word: 'famous', meaning: '著名的', type: 'adj.', sentence: 'Leonardo da Vinci is a _____ artist.', definition: 'Known by many people.' },
+            { word: 'favorite', meaning: '最喜愛的', type: 'adj.', sentence: 'Red is my _____ color.', definition: 'The one you like the most.' },
+            { word: 'festival', meaning: '節慶', type: 'n.', sentence: 'The Lantern _____ is beautiful.', definition: 'A special day or period with a lot of social activities.' },
+            { word: 'foggy', meaning: '有霧的', type: 'adj.', sentence: 'It was so _____ that we couldn\'t see the road.', definition: 'Full of thick cloud close to the ground.' },
+            { word: 'friendly', meaning: '友善的', type: 'adj.', sentence: 'Our new neighbors are very _____.', definition: 'Behaving in a pleasant, kind way towards someone.' },
+            { word: 'future', meaning: '未來', type: 'n.', sentence: 'What do you want to be in the _____?', definition: 'The time that will come after the present.' },
+            { word: 'geography', meaning: '地理', type: 'n.', sentence: 'We learned about rivers in _____ class.', definition: 'The study of the systems and processes involved in the world\'s weather, mountains, seas, lakes, etc.' },
+            { word: 'happen', meaning: '發生', type: 'v.', sentence: 'What will _____ if I press this button?', definition: 'To take place; to occur.' },
+            { word: 'heavy', meaning: '重的', type: 'adj.', sentence: 'This box is too _____ to lift.', definition: 'Weighing a lot.' },
+            { word: 'history', meaning: '歷史', type: 'n.', sentence: 'We are studying American _____.', definition: 'The study of past events.' },
+            { word: 'hobby', meaning: '嗜好', type: 'n.', sentence: 'My favorite _____ is reading.', definition: 'An activity you do for pleasure when you are not working.' },
+            { word: 'horrible', meaning: '可怕的;糟糕的', type: 'adj.', sentence: 'The weather was _____ yesterday.', definition: 'Very unpleasant or bad.' },
+            { word: 'hotel', meaning: '旅館', type: 'n.', sentence: 'We stayed in a nice _____ by the sea.', definition: 'A place where you pay to stay the night.' },
+            { word: 'husband', meaning: '丈夫', type: 'n.', sentence: 'Mr. Smith is Mrs. Smith\'s _____.', definition: 'The man that a woman is married to.' },
+            { word: 'improve', meaning: '改善', type: 'v.', sentence: 'I want to _____ my English skills.', definition: 'To make something better.' },
+            { word: 'information', meaning: '資訊', type: 'n.', sentence: 'Can you give me some _____ about the tour?', definition: 'Facts about a situation, person, event, etc.' },
+            { word: 'insect', meaning: '昆蟲', type: 'n.', sentence: 'An ant is a small _____.', definition: 'A small creature with six legs.' },
+            { word: 'instrument', meaning: '樂器', type: 'n.', sentence: 'Which _____ do you play? Piano or guitar?', definition: 'An object used for producing music.' },
+            { word: 'invite', meaning: '邀請', type: 'v.', sentence: 'Let\'s _____ Tom to our party.', definition: 'To ask someone to come to a social event.' },
+            { word: 'island', meaning: '島嶼', type: 'n.', sentence: 'Taiwan is a beautiful _____.', definition: 'A piece of land completely surrounded by water.' },
+            { word: 'journey', meaning: '旅程', type: 'n.', sentence: 'Have a safe _____ home!', definition: 'The act of traveling from one place to another.' },
+            { word: 'kitchen', meaning: '廚房', type: 'n.', sentence: 'Mom is cooking dinner in the _____.', definition: 'A room where food is prepared and cooked.' },
+            { word: 'language', meaning: '語言', type: 'n.', sentence: 'How many _____ do you speak?', definition: 'A system of communication used by a particular country or community.' },
+            { word: 'medicine', meaning: '藥', type: 'n.', sentence: 'Take this _____ three times a day.', definition: 'Something you take to treat an illness.' },
+            { word: 'museum', meaning: '博物館', type: 'n.', sentence: 'We saw old bones at the _____.', definition: 'A building where objects of historical, scientific, or artistic interest are kept.' }
+        ];
+
+        // --- 角色圖片庫 ---
+        const CHARACTER_IMAGES = [
+            "https://drive.google.com/thumbnail?id=14SfoP3jwHyiDwkt57f5lJYRvomV71XIR&sz=w1000",
+            "https://drive.google.com/thumbnail?id=1vFOu13zScXCjDLKRzeB693tN7bNdur7d&sz=w1000",
+            "https://drive.google.com/thumbnail?id=1lhgfcEga_A4IVLByXLonwfrLA0XiTMa4&sz=w1000",
+            "https://drive.google.com/thumbnail?id=1hUr1F0GyNDf7IiHswqLOFp9Q9RYubbNh&sz=w1000"
+        ];
+
+        const GameCharacter = ({ index, emotion, className = "" }) => {
+            const safeIndex = index % CHARACTER_IMAGES.length;
+            const imageUrl = CHARACTER_IMAGES[safeIndex];
+
+            let animationClass = "";
+            let filterClass = "";
+
+            if (emotion === 'happy') {
+                animationClass = "animate-bounce";
+            } else if (emotion === 'sad') {
+                animationClass = "animate-shake";
+                filterClass = "brightness-75 grayscale-50"; 
+            } else if (emotion === 'shock') {
+                animationClass = "animate-pulse";
+            }
+
+            return (
+                <div className={`${className} flex items-center justify-center transition-all duration-300 relative`}>
+                    <img 
+                        src={imageUrl} 
+                        alt="Character" 
+                        className={`w-full h-full object-contain ${animationClass} ${filterClass}`}
+                        referrerPolicy="no-referrer"
+                        onError={(e) => { 
+                            e.target.style.display='none'; 
+                            e.target.parentElement.innerHTML = '<div class="text-xs text-gray-400 text-center flex flex-col items-center justify-center h-full"><div>⚠️</div><div>圖片無法讀取</div></div>';
+                        }}
+                    />
+                </div>
+            );
+        };
+
+        const KETVocabApp = () => {
+            const [screen, setScreen] = useState('home'); 
+            const [vocabList, setVocabList] = useState([]);
+            const [currentQuizList, setCurrentQuizList] = useState([]);
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const [userAnswer, setUserAnswer] = useState(null); 
+            const [showFeedback, setShowFeedback] = useState(false);
+            const [isCorrect, setIsCorrect] = useState(false);
+            const [wrongQuestions, setWrongQuestions] = useState([]);
+            const [score, setScore] = useState(0);
+            const [isReviewMode, setIsReviewMode] = useState(false);
+            const [inputText, setInputText] = useState('');
+            const [isChallengeMode, setIsChallengeMode] = useState(false);
+            const [isAiLoading, setIsAiLoading] = useState(false);
+            const [aiExplanation, setAiExplanation] = useState(null);
+            const [charIndex, setCharIndex] = useState(0); 
+
+            useEffect(() => {
+                setVocabList(KET_DB.slice(0, 10));
+                setCharIndex(Math.floor(Math.random() * CHARACTER_IMAGES.length));
+            }, []);
+
+            const generateQuiz = (sourceList, isReview = false) => {
+                let selectedList = [...sourceList];
+                if (!isReview && selectedList.length > 20) {
+                    selectedList = selectedList.sort(() => 0.5 - Math.random()).slice(0, 20); 
+                } else {
+                    selectedList = selectedList.sort(() => 0.5 - Math.random());
+                }
+                
+                const quizData = selectedList.map(item => {
+                const typeRoll = Math.random();
+                let qType = 'wordToMeaning'; 
+                if (typeRoll > 0.66) qType = 'sentenceCloze'; 
+                else if (typeRoll > 0.33) qType = 'meaningToWord'; 
+
+                let distractors = [];
+                const source = sourceList.length > 10 ? sourceList : KET_DB;
+
+                if (qType === 'wordToMeaning') {
+                    distractors = source.filter(v => v.word !== item.word)
+                        .sort(() => 0.5 - Math.random()).slice(0, 3).map(v => v.meaning);
+                } else {
+                    distractors = source.filter(v => v.word !== item.word)
+                        .sort(() => 0.5 - Math.random()).slice(0, 3).map(v => v.word);
+                }
+                
+                const correctOpt = qType === 'wordToMeaning' ? item.meaning : item.word;
+                const options = [...distractors, correctOpt].sort(() => 0.5 - Math.random());
+                
+                return {
+                    ...item,
+                    options,
+                    questionType: qType
+                };
+                });
+
+                setCurrentQuizList(quizData);
+                setCurrentIndex(0);
+                setScore(0);
+                if (!isReview) setWrongQuestions([]);
+                setIsReviewMode(isReview);
+                setIsChallengeMode(false); 
+                setScreen('quiz');
+            };
+
+            const generateChallengeQuiz = () => {
+                const availableWords = vocabList.filter(v => v.definition); 
+                const sourcePool = availableWords.length >= 5 ? availableWords : KET_DB;
+                const challengeList = sourcePool.sort(() => 0.5 - Math.random()).slice(0, 5);
+                
+                const quizData = challengeList.map(item => {
+                    const distractors = KET_DB.filter(v => v.word !== item.word)
+                        .sort(() => 0.5 - Math.random()).slice(0, 3).map(v => v.word);
+                    const options = [...distractors, item.word].sort(() => 0.5 - Math.random());
+                    return {
+                        ...item,
+                        options,
+                        questionType: 'englishDef' 
+                    };
+                });
+                
+                setCurrentQuizList(quizData);
+                setCurrentIndex(0);
+                setIsChallengeMode(true); 
+                setScreen('quiz');
+            };
+
+            const handleOptionClick = (option) => {
+                if (showFeedback) return;
+                setUserAnswer(option);
+            };
+
+            const checkAnswer = () => {
+                const currentQ = currentQuizList[currentIndex];
+                let isAnsCorrect = false;
+
+                if (currentQ.questionType === 'wordToMeaning') {
+                    isAnsCorrect = userAnswer === currentQ.meaning;
+                } else {
+                    isAnsCorrect = userAnswer === currentQ.word;
+                }
+
+                setIsCorrect(isAnsCorrect);
+                setShowFeedback(true);
+                setAiExplanation(null);
+                setCharIndex(prev => (prev + 1) % CHARACTER_IMAGES.length);
+
+                if (isAnsCorrect) {
+                setScore(s => s + (isChallengeMode ? 50 : 10)); 
+                } else {
+                if (!isChallengeMode && !wrongQuestions.find(q => q.word === currentQ.word)) {
+                    setWrongQuestions(prev => [...prev, currentQ]);
+                }
+                }
+            };
+
+            const nextQuestion = () => {
+                setShowFeedback(false);
+                setUserAnswer(null);
+                setAiExplanation(null);
+                
+                if (currentIndex < currentQuizList.length - 1) {
+                setCurrentIndex(prev => prev + 1);
+                } else {
+                if (!isReviewMode && !isChallengeMode) {
+                    setScreen('challenge-prompt');
+                } else {
+                    setScreen('result');
+                }
+                }
+            };
+
+            const handleSmartImport = async () => {
+                const rawWords = inputText
+                    .replace(/[.,:;]/g, ' ') 
+                    .split(/[\n\s]+/)
+                    .map(w => w.trim().toLowerCase())
+                    .filter(w => w.length > 0);
+                
+                const uniqueWords = [...new Set(rawWords)];
+
+                if (uniqueWords.length === 0) {
+                    setVocabList(KET_DB);
+                    alert(`未檢測到輸入，已為您自動載入 ${KET_DB.length} 個 KET 精選單字！`);
+                    setScreen('home');
+                    return;
+                }
+
+                const matchedList = [];
+                const unknownWords = [];
+
+                uniqueWords.forEach(w => {
+                    const found = KET_DB.find(dbItem => dbItem.word.toLowerCase() === w);
+                    if (found) {
+                        matchedList.push(found);
+                    } else {
+                        unknownWords.push(w);
+                    }
+                });
+
+                if (unknownWords.length > 0) {
+                    setIsAiLoading(true);
+                    try {
+                        const wordsToFetch = unknownWords.slice(0, 15); 
+                        const prompt = `
+                        I have a list of English words: ${JSON.stringify(wordsToFetch)}.
+                        Generate JSON array (fields: word, meaning(Traditional Chinese), type, sentence(with '_____'), definition(simple English)).
+                        Return ONLY JSON.
+                        `;
+                        
+                        const resultText = await callGemini(prompt);
+                        const cleanJson = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const aiGeneratedWords = JSON.parse(cleanJson);
+                        
+                        const finalNewList = [...matchedList, ...aiGeneratedWords];
+                        
+                        if (finalNewList.length < 4) {
+                            alert("單字總數太少，已自動補充一些 KET 基礎單字。");
+                            const supplementary = KET_DB.filter(k => !finalNewList.find(n => n.word === k.word)).slice(0, 10);
+                            setVocabList([...finalNewList, ...supplementary]);
+                        } else {
+                            setVocabList(finalNewList);
+                        }
+                        
+                        alert(`載入完成！包含 ${aiGeneratedWords.length} 個 AI 生成單字。`);
+
+                    } catch (e) {
+                        console.error("AI Import Failed", e);
+                        alert("AI 連線失敗，僅載入本地已知單字。");
+                        setVocabList(matchedList.length > 0 ? matchedList : KET_DB);
+                    } finally {
+                        setIsAiLoading(false);
+                        setScreen('home');
+                    }
+                } else {
+                    setVocabList(matchedList);
+                    alert(`成功載入 ${matchedList.length} 個單字！`);
+                    setScreen('home');
+                }
+            };
+
+            const askAITutor = async () => {
+                if (aiExplanation) return;
+                setIsAiLoading(true);
+                
+                const currentQ = currentQuizList[currentIndex];
+                const prompt = `
+                    Explain "${currentQ.word}" (${currentQ.meaning}) to a 10-year-old in Traditional Chinese. Max 2 sentences. Fun memory tip.
+                `;
+
+                try {
+                    const text = await callGemini(prompt);
+                    setAiExplanation(text);
+                } catch (e) {
+                    setAiExplanation("老師現在有點忙，請稍後再試試看！(網路錯誤)");
+                } finally {
+                    setIsAiLoading(false);
+                }
+            };
+
+            // 渲染畫面
+            if (screen === 'home') {
+                return (
+                    <div className="flex flex-col items-center justify-center min-h-screen bg-yellow-50 p-4 space-y-8 font-sans">
+                        <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md text-center border-b-8 border-yellow-200">
+                            <h1 className="text-3xl font-bold text-gray-800 mb-2">KET 單字特訓營</h1>
+                            <p className="text-gray-500 mb-6 flex items-center justify-center gap-1">
+                                <Sparkles size={16} className="text-yellow-500" />
+                                AI 賦能版
+                                <Sparkles size={16} className="text-yellow-500" />
+                            </p>
+                            <div className="flex justify-center space-x-4 mb-8">
+                            {CHARACTER_IMAGES.map((_, idx) => (
+                                <GameCharacter key={idx} index={idx} emotion="happy" className="w-16 h-16" />
+                            ))}
+                            </div>
+                            <button onClick={() => generateQuiz(vocabList)} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-2xl border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center space-x-2 text-xl mb-4">
+                                <Play size={24} fill="currentColor" />
+                                <span>開始測驗 ({vocabList.length}單字)</span>
+                            </button>
+                            <button onClick={() => setScreen('settings')} className="w-full bg-blue-400 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-2xl border-b-4 border-blue-600 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center space-x-2">
+                                <Settings size={20} />
+                                <span>單字匯入設定</span>
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'settings') {
+                return (
+                    <div className="min-h-screen bg-blue-50 p-4 font-sans relative">
+                        <div className="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6 border-b-8 border-blue-200 max-h-[90vh] overflow-y-auto">
+                            <div className="mb-4">
+                                <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                    <Sparkles className="mr-2 text-yellow-500" /> AI 智能單字匯入
+                                </h2>
+                                <div className="bg-blue-50 p-4 rounded-xl mb-4 text-sm text-blue-800">
+                                    貼上英文單字，AI 自動查詞義、造句！
+                                </div>
+                                <textarea className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:outline-none bg-gray-50 mb-4 text-lg font-mono" placeholder="請貼上英文單字 (如: apple, banana)..." value={inputText} onChange={(e) => setInputText(e.target.value)} disabled={isAiLoading} />
+                            </div>
+                            <div className="flex space-x-3">
+                                <button onClick={() => setScreen('home')} disabled={isAiLoading} className="flex-1 bg-gray-200 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-300">返回首頁</button>
+                                <button onClick={handleSmartImport} disabled={isAiLoading} className="flex-1 bg-blue-500 text-white font-bold py-3 rounded-xl border-b-4 border-blue-700 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center">
+                                    {isAiLoading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" size={18} />}
+                                    {isAiLoading ? 'AI 載入單字' : '確認設定'}
+                                </button>
+                            </div>
+                        </div>
+                        {isAiLoading && (
+                            <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-50 rounded-3xl">
+                                <div className="bg-white p-6 rounded-2xl shadow-xl text-center border-4 border-blue-100">
+                                    <Loader2 className="animate-spin w-12 h-12 text-blue-500 mx-auto mb-2" />
+                                    <p className="font-bold text-gray-700">AI 老師正在處理...</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            if (screen === 'challenge-prompt') {
+                return (
+                    <div className="flex flex-col items-center justify-center min-h-screen bg-purple-900 p-4 font-sans text-center text-white">
+                        <div className="mb-6 animate-bounce"><Sword size={80} className="text-yellow-400" /></div>
+                        <h2 className="text-4xl font-black text-yellow-400 mb-4 tracking-wider drop-shadow-lg">BOSS 關卡解鎖！</h2>
+                        <p className="text-purple-200 mb-8 text-xl max-w-xs">恭喜完成基礎訓練！<br/>敢不敢接受 5 題<span className="text-white font-bold">「全英文描述」</span>的挑戰？</p>
+                        <div className="w-full max-w-sm space-y-4">
+                            <button onClick={generateChallengeQuiz} className="w-full bg-yellow-500 hover:bg-yellow-400 text-purple-900 font-black py-4 rounded-2xl border-b-8 border-yellow-700 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center space-x-2 text-xl shadow-xl">
+                                <Flame size={24} /><span>接受挑戰 (Start)</span>
+                            </button>
+                            <button onClick={() => setScreen('result')} className="w-full bg-purple-800 text-purple-300 font-bold py-3 rounded-2xl hover:bg-purple-700">不，先看成績</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'result') {
+                 return (
+                    <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4 font-sans text-center">
+                    <div className="mb-6 flex space-x-2">
+                        <GameCharacter index={0} emotion="happy" className="w-24 h-24" />
+                        <GameCharacter index={1} emotion="happy" className="w-24 h-24" />
+                    </div>
+                    
+                    <h2 className="text-3xl font-bold text-yellow-500 mb-2">
+                        {isReviewMode ? '複習完成！' : '訓練結束！'}
+                    </h2>
+                    <p className="text-gray-500 mb-8 text-xl">
+                        本局獲得 XP: <span className="font-bold text-green-500">{score}</span>
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-4 w-full max-w-md mb-8">
+                        <div className="bg-yellow-50 p-4 rounded-2xl border-2 border-yellow-200">
+                        <div className="text-yellow-600 font-bold text-sm uppercase">總題數</div>
+                        <div className="text-2xl font-black text-gray-700">{isChallengeMode ? 5 : currentQuizList.length}</div>
+                        </div>
+                        <div className="bg-green-50 p-4 rounded-2xl border-2 border-green-200">
+                        <div className="text-green-600 font-bold text-sm uppercase">正確率</div>
+                        <div className="text-2xl font-black text-gray-700">
+                            {Math.round(((currentQuizList.length - wrongQuestions.length) / currentQuizList.length) * 100)}%
+                        </div>
+                        </div>
+                    </div>
+
+                    <div className="w-full max-w-md space-y-3">
+                        {wrongQuestions.length > 0 && !isReviewMode && (
+                        <button onClick={() => generateQuiz(wrongQuestions, true)} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-2xl border-b-4 border-red-700 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center space-x-2">
+                            <RefreshCcw size={20} />
+                            <span>進入錯題特訓 ({wrongQuestions.length} 題)</span>
+                        </button>
+                        )}
+                        <button onClick={() => setScreen('home')} className="w-full bg-gray-200 hover:bg-gray-300 text-gray-600 font-bold py-4 rounded-2xl border-b-4 border-gray-400 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center space-x-2">
+                        <RotateCcw size={20} />
+                        <span>回到首頁</span>
+                        </button>
+                    </div>
+                    </div>
+                );
+            }
+
+            // Quiz Screen
+            const currentQ = currentQuizList[currentIndex];
+            const progress = ((currentIndex) / currentQuizList.length) * 100;
+            const bgColor = isChallengeMode ? "bg-purple-50" : "bg-white";
+            const barColor = isChallengeMode ? "bg-purple-500" : "bg-green-500";
+            const scoreColor = isChallengeMode ? "text-purple-600" : "text-green-500";
+
+            let emotion = "normal";
+            if (showFeedback) emotion = isCorrect ? "happy" : "sad";
+            else if (isChallengeMode) emotion = "shock";
+
+            const renderQuestionArea = () => {
+                if (currentQ.questionType === 'wordToMeaning') {
+                    return (
+                        <div className="text-center mb-6">
+                            <h2 className="text-lg font-bold text-gray-400 mb-2 uppercase tracking-widest">Translate this</h2>
+                            <div className="flex items-center justify-center space-x-2 mb-4">
+                                <h1 className="text-4xl font-black text-gray-800 tracking-wide">{currentQ.word}</h1>
+                                <Volume2 className="text-blue-400 cursor-pointer hover:text-blue-600" size={28} />
+                            </div>
+                            <div className="inline-block px-3 py-1 bg-gray-100 rounded-lg text-gray-500 font-mono text-sm">{currentQ.type}</div>
+                        </div>
+                    );
+                }
+                if (currentQ.questionType === 'meaningToWord') {
+                    return (
+                        <div className="text-center mb-6">
+                            <h2 className="text-lg font-bold text-gray-400 mb-2 uppercase tracking-widest">Choose the word</h2>
+                            <h1 className="text-3xl font-black text-gray-800 tracking-wide mb-4">{currentQ.meaning}</h1>
+                        </div>
+                    );
+                }
+                if (currentQ.questionType === 'sentenceCloze') {
+                    const parts = currentQ.sentence.split('_____');
+                    return (
+                        <div className="text-center mb-6 w-full">
+                            <h2 className="text-lg font-bold text-gray-400 mb-4 uppercase tracking-widest">Fill in the blank</h2>
+                            <div className="bg-blue-50 p-6 rounded-2xl border-2 border-blue-100 text-xl font-medium text-gray-700 leading-relaxed text-left">
+                                {parts[0]}
+                                <span className="inline-block w-20 border-b-2 border-blue-500 mx-1 text-blue-600 font-bold text-center">{showFeedback ? currentQ.word : '?'}</span>
+                                {parts[1]}
+                            </div>
+                            <div className="mt-2 text-sm text-gray-400">({currentQ.meaning})</div>
+                        </div>
+                    );
+                }
+                if (currentQ.questionType === 'englishDef') {
+                    return (
+                        <div className="text-center mb-6 w-full animate-pulse-slow">
+                            <div className="flex items-center justify-center space-x-2 mb-4">
+                                <Flame className="text-red-500" /><h2 className="text-lg font-black text-red-500 uppercase tracking-widest">Challenge Mode</h2><Flame className="text-red-500" />
+                            </div>
+                            <div className="bg-purple-100 p-6 rounded-2xl border-2 border-purple-300 text-xl font-bold text-purple-900 leading-relaxed text-center shadow-lg">"{currentQ.definition || "Definition not available"}"</div>
+                            <div className="mt-2 text-sm text-gray-400">Which word matches this description?</div>
+                        </div>
+                    );
+                }
+            };
+
+            return (
+                <div className={`flex flex-col min-h-screen ${bgColor} font-sans`}>
+                    <div className="p-4 flex items-center space-x-4 max-w-2xl mx-auto w-full">
+                        <button onClick={() => setScreen('home')}><Settings className="text-gray-300" /></button>
+                        <div className="flex-1 h-4 bg-gray-200 rounded-full overflow-hidden">
+                            <div className={`h-full ${barColor} transition-all duration-500 ease-out`} style={{ width: `${progress}%` }}></div>
+                        </div>
+                        <div className={`${scoreColor} font-bold flex items-center`}><Star size={16} className="mr-1 fill-current" /> {score}</div>
+                    </div>
+
+                    <div className="flex-1 flex flex-col items-center max-w-2xl mx-auto w-full px-4 pb-48">
+                        <div className="mt-4 w-full flex flex-col items-center">{renderQuestionArea()}</div>
+                        <div className="mb-4 relative">
+                            {showFeedback && isCorrect && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none scale-150 animate-pulse">
+                                <Sparkles className="text-yellow-400 absolute -top-4 -left-4" size={32} />
+                                <Sparkles className="text-yellow-400 absolute top-0 -right-8" size={24} />
+                                <Sparkles className="text-yellow-400 absolute bottom-0 left-8" size={24} />
+                            </div>
+                            )}
+                            <GameCharacter index={charIndex} emotion={emotion} className="w-32 h-32" />
+                        </div>
+                        <div className="w-full grid grid-cols-1 gap-3">
+                            {currentQ.options.map((option, idx) => {
+                                const correctString = currentQ.questionType === 'wordToMeaning' ? currentQ.meaning : currentQ.word;
+                                let btnClass = "bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50";
+                                if (userAnswer === option) btnClass = "bg-blue-100 border-blue-400 text-blue-600";
+                                if (showFeedback) {
+                                    if (option === correctString) btnClass = "bg-green-100 border-green-500 text-green-700";
+                                    else if (userAnswer === option && !isCorrect) btnClass = "bg-red-100 border-red-500 text-red-700";
+                                    else btnClass = "bg-white border-gray-200 text-gray-300 opacity-50"; 
+                                }
+                                return (
+                                    <button key={idx} onClick={() => handleOptionClick(option)} disabled={showFeedback} className={`w-full p-4 rounded-xl text-lg font-bold transition-all border-b-4 active:border-b-2 active:translate-y-1 ${btnClass}`}>
+                                        {option}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className={`fixed bottom-0 w-full p-6 border-t-2 ${showFeedback ? (isCorrect ? 'bg-green-100 border-green-200' : 'bg-red-100 border-red-200') : 'bg-white border-gray-200'} max-h-[40vh] overflow-y-auto`}>
+                        <div className="max-w-2xl mx-auto flex flex-col space-y-4">
+                            {showFeedback && (
+                                <div className="flex flex-col space-y-3">
+                                    <div className="flex items-center space-x-3">
+                                        <div className={`p-2 rounded-full ${isCorrect ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+                                            {isCorrect ? <Check size={24} /> : <div className="font-bold text-xl px-2">X</div>}
+                                        </div>
+                                        <div>
+                                            <div className={`font-bold text-xl ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>{isCorrect ? '太棒了！' : '正確答案是：'}</div>
+                                            {!isCorrect && (<div className="text-red-600 font-bold">{currentQ.questionType === 'wordToMeaning' ? currentQ.meaning : currentQ.word}</div>)}
+                                        </div>
+                                    </div>
+                                    <div className="w-full">
+                                        {!aiExplanation ? (
+                                            <button onClick={askAITutor} disabled={isAiLoading} className="text-sm bg-white/50 hover:bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-full flex items-center transition-all">
+                                                {isAiLoading ? <Loader2 className="animate-spin mr-2" size={16}/> : <Sparkles className="mr-2" size={16} />}
+                                                {isAiLoading ? '老師思考中...' : '✨ 呼叫 AI 老師講解'}
+                                            </button>
+                                        ) : (
+                                            <div className="bg-white/80 p-3 rounded-xl border border-purple-200 text-purple-800 text-sm mt-2 animate-fade-in flex items-start">
+                                                <Sparkles className="mr-2 mt-1 flex-shrink-0 text-purple-500" size={16} /><div>{aiExplanation}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                            <div className="w-full">
+                                {!showFeedback ? (
+                                    <button onClick={checkAnswer} disabled={!userAnswer} className={`w-full font-bold py-3 px-8 rounded-2xl border-b-4 uppercase tracking-wider transition-all ${userAnswer ? 'bg-green-500 hover:bg-green-600 text-white border-green-700 active:border-b-0 active:translate-y-1' : 'bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed'}`}>確認 Check</button>
+                                ) : (
+                                    <button onClick={nextQuestion} className={`w-full font-bold py-3 px-8 rounded-2xl border-b-4 uppercase tracking-wider transition-all text-white active:border-b-0 active:translate-y-1 ${isCorrect ? 'bg-green-500 border-green-700 hover:bg-green-600' : 'bg-red-500 border-red-700 hover:bg-red-600'}`}>繼續 Continue</button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<KETVocabApp />);
+    </script>
+</body>
+</html>
